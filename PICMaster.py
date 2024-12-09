@@ -1,4 +1,4 @@
-from test_homework8_PIC8259A import PIC8259A
+from PIC8259A import PIC8259A
 
 class PICMaster(PIC8259A):
     def __init__(self, slave_pic):
