@@ -3,8 +3,12 @@ import random
 class Peripheral:
     def __init__(self):
         self.devices = {
-            "LED": {"state": 0, "value": None},
-            "Fan": {"state": 0, "value": None}
+            "LED1": {"state": 0, "value": None},
+            "LED2": {"state": 0, "value": None},
+            "LED3": {"state": 0, "value": None},
+            "Fan1": {"state": 0, "value": None},
+            "Fan2": {"state": 0, "value": None},
+            "Fan3": {"state": 0, "value": None}
         }
         self.display = ""
 
