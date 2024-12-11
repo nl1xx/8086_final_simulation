@@ -1,9 +1,9 @@
 from Peripheral import Peripheral
-from PTimer8235 import Timer8235
+from PTimer8253 import Timer8253
 from Parallel8255 import Parallel8255
 
 peripheral = Peripheral()
-timer = Timer8235()
+timer = Timer8253()
 parallel8255 = Parallel8255()
 
 class BIU:
@@ -228,23 +228,34 @@ class EU:
             peripheral.update_display(status)
 
         if opcode == "CONFIG_TIMER":
-            mode = int(parts[1])
-            initial_value = int(parts[2])
-            self.timer.configure(mode, initial_value)
+            # 配置计数器：计数器编号、模式和初始值
+            counter_id = int(parts[1])  # 获取计数器编号（0, 1, 2）
+            mode = int(parts[2])  # 获取模式
+            initial_value = int(parts[3])  # 获取初始计数值
+            self.timer.write_control(counter_id, mode, initial_value)  # 使用8253的逻辑配置计数器
+
         elif opcode == "START_TIMER":
-            self.timer.start()
+            counter_id = int(parts[1])  # 获取计数器编号
+            self.timer.start(counter_id)  # 启动指定计数器
+
         elif opcode == "STOP_TIMER":
-            self.timer.stop()
+            counter_id = int(parts[1])  # 获取计数器编号
+            self.timer.stop(counter_id)  # 停止指定计数器
+
         elif opcode == "TICK_TIMER":
-            self.timer.tick()
-            if self.timer.counter_register == 3:
+            counter_id = int(parts[1])  # 获取计数器编号
+            self.timer.tick(counter_id)  # 模拟时钟周期
+            counter_value = self.timer.read_counter(counter_id)  # 读取当前计数值
+
+            # 根据计数器的值，执行外设控制逻辑
+            if counter_value == 3:
                 peripheral.control_device("LED3", 1)
                 print("LED3 turned ON")
                 print("Fan3 turned OFF")
-            elif self.timer.counter_register == 5:
+            elif counter_value == 5:
                 peripheral.control_device("Fan3", 1)
                 print("Fan3 turned ON")
-            elif self.timer.counter_register == 2:
+            elif counter_value == 2:
                 print("LED3 turned OFF")
 
         if opcode == "WRITE_CTRL":
@@ -500,44 +511,44 @@ memory = [0] * 256
 
 instructions = [
     # 配置定时器模式1，初始值10，定时器每10个周期触发一次
-    "CONFIG_TIMER 1 10",
+    "CONFIG_TIMER 1 1 20",
     # 启动定时器
-    "START_TIMER",
+    "START_TIMER 1",
 
     # 模拟定时器周期，定时器会在每次时钟周期触发
-    "TICK_TIMER",          # 周期1
-    "TICK_TIMER",          # 周期2
-    "TICK_TIMER",          # 周期3
-    "TICK_TIMER",          # 周期4
-    "TICK_TIMER",          # 周期5
-    "TICK_TIMER",          # 周期6
-    "TICK_TIMER",          # 周期7
-    "TICK_TIMER",          # 周期8
-    "TICK_TIMER",          # 周期9
-    "TICK_TIMER",          # 周期10
+    "TICK_TIMER 1",          # 周期1
+    "TICK_TIMER 1",          # 周期2
+    "TICK_TIMER 1",          # 周期3
+    "TICK_TIMER 1",          # 周期4
+    "TICK_TIMER 1",          # 周期5
+    "TICK_TIMER 1",          # 周期6
+    "TICK_TIMER 1",          # 周期7
+    "TICK_TIMER 1",          # 周期8
+    "TICK_TIMER 1",          # 周期9
+    "TICK_TIMER 1",          # 周期10
 
     # LED的开关状态
     "VOICE 01",            # 开启LED1
-    "TICK_TIMER",          # 周期11
+    "TICK_TIMER 1",          # 周期11
     "VOICE 03",            # 开启LED2
-    "TICK_TIMER",          # 周期12
+    "TICK_TIMER 1",          # 周期12
     "VOICE 02",            # 关闭LED1
-    "TICK_TIMER",          # 周期13
+    "TICK_TIMER 1",          # 周期13
     "VOICE 04",            # 关闭LED2
-    "TICK_TIMER",          # 周期14
+    "TICK_TIMER 1",          # 周期14
 
     # 风扇的开关状态
     "VOICE 05",            # 开启FAN1
-    "TICK_TIMER",          # 周期15
+    "TICK_TIMER 1",          # 周期15
     "VOICE 07",            # 开启FAN2
-    "TICK_TIMER",          # 周期16
+    "TICK_TIMER 1",          # 周期16
     "VOICE 06",            # 关闭FAN1
-    "TICK_TIMER",          # 周期17
+    "TICK_TIMER 1",          # 周期17
     "VOICE 08",            # 关闭FAN2
-    "TICK_TIMER",          # 周期18
+    "TICK_TIMER 1",          # 周期18
 
     # 停止定时器
-    "STOP_TIMER",          # 停止定时器
+    "STOP_TIMER 1",          # 停止定时器
     "WRITE_CTRL 0x80",
     "WRITE_PORT A 0x0F",
     "WRITE_PORT B 0x55",
