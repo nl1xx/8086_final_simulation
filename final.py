@@ -248,15 +248,42 @@ class EU:
                 print("LED3 turned OFF")
 
         if opcode == "WRITE_CTRL":
-            value = int(parts[1], 16)
-            self.parallel_interface.write_control(value)
+            value = int(parts[1], 16)  # 将十六进制字符串转换为整数
+            self.parallel_interface.set_address(1, 1)  # 地址线选择控制寄存器
+            self.parallel_interface.set_control_lines(rd=True, wr=False, cs=False)  # 设置写操作
+            self.parallel_interface.write(value)  # 写入控制寄存器的值
+
         elif opcode == "WRITE_PORT":
             port = parts[1]
             value = int(parts[2], 16)
-            self.parallel_interface.write_port(port, value)
+
+            if port == "A":
+                self.parallel_interface.set_address(0, 0)  # 地址线选择端口A
+            elif port == "B":
+                self.parallel_interface.set_address(0, 1)  # 地址线选择端口B
+            elif port == "C":
+                self.parallel_interface.set_address(1, 0)  # 地址线选择端口C
+            else:
+                raise ValueError("Invalid port specified")
+
+            self.parallel_interface.set_control_lines(rd=True, wr=False, cs=False)  # 设置写操作
+            self.parallel_interface.write(value)  # 写入端口值
+
         elif opcode == "READ_PORT":
+            # 从指定端口读取数据
             port = parts[1]
-            self.parallel_interface.read_port(port)
+
+            if port == "A":
+                self.parallel_interface.set_address(0, 0)  # 地址线选择端口A
+            elif port == "B":
+                self.parallel_interface.set_address(0, 1)  # 地址线选择端口B
+            elif port == "C":
+                self.parallel_interface.set_address(1, 0)  # 地址线选择端口C
+            else:
+                raise ValueError("Invalid port specified")
+
+            self.parallel_interface.set_control_lines(rd=False, wr=True, cs=False)  # 设置读操作
+            self.parallel_interface.read()  # 读取端口值
 
         # 其他普通指令（如MOV、ADD等），这里省略常规指令的执行部分
         else:
@@ -511,6 +538,13 @@ instructions = [
 
     # 停止定时器
     "STOP_TIMER",          # 停止定时器
+    "WRITE_CTRL 0x80",
+    "WRITE_PORT A 0x0F",
+    "WRITE_PORT B 0x55",
+    "WRITE_PORT C 0x3C",
+    "READ_PORT A",
+    "READ_PORT B",
+    "READ_PORT C",
     "HLT"                  # 停止执行
 ]
 

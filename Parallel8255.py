@@ -163,3 +163,24 @@ class Parallel8255:
                 raise ValueError("Invalid mode for port C")
         else:
             raise ValueError("Invalid port")
+
+# # 创建芯片实例
+# chip = Parallel8255()
+#
+# # 复位芯片
+# chip.reset()
+#
+# # 设置地址线选择端口A
+# chip.set_address(0, 0)
+#
+# # 设置控制线，片选有效，写使能低电平
+# chip.set_control_lines(rd=True, wr=False, cs=False)
+#
+# # 向端口A写入数据
+# chip.write(0x5A)
+#
+# # 设置控制线，片选有效，读使能低电平
+# chip.set_control_lines(rd=False, wr=True, cs=False)
+#
+# # 从端口A读取数据
+# chip.read()
