@@ -1,6 +1,11 @@
+import threading
+import time
+
 from Peripheral import Peripheral
 from PTimer8253 import Timer8253
 from Parallel8255 import Parallel8255
+import tkinter as tk
+from tkinter import ttk
 
 peripheral = Peripheral()
 timer = Timer8253()
@@ -36,6 +41,18 @@ class EU:
         self.comments = []  # 用于存储解析过程中遇到的注释
         self.timer = timer
         self.parallel_interface = parallel8255
+        self.gui = None
+
+    def set_gui(self, gui):
+        self.gui = gui
+
+    def control_device(self, device, state):
+        # 当需要控制设备时将调用
+        if self.gui:
+            self.gui.control_device(device, state)
+        else:
+            raise ValueError("GUI is not set")
+
 
     def set_memory(self, memory):
         self.memory = memory
@@ -250,13 +267,15 @@ class EU:
             # 根据计数器的值，执行外设控制逻辑
             if counter_value == 3:
                 peripheral.control_device("LED3", 1)
-                print("LED3 turned ON")
-                print("Fan3 turned OFF")
+                print("Display: LED3 ON")
+                self.gui.control_device("LED3", 1)
             elif counter_value == 5:
                 peripheral.control_device("Fan3", 1)
-                print("Fan3 turned ON")
+                self.gui.control_device("FAN3", 1)
+                print("Display: Fan3 ON")
             elif counter_value == 2:
-                print("LED3 turned OFF")
+                print("Display: LED3 OFF")
+                self.gui.control_device("LED3", 0)
 
         if opcode == "WRITE_CTRL":
             value = int(parts[1], 16)  # 将十六进制字符串转换为整数
@@ -430,16 +449,78 @@ class EU:
             print(f"{proc}: {position}")
 
 
+class GUI:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("CPU Simulator")
+
+        # LED状态
+        self.led1_label = ttk.Label(self.root, text="LED1: Off")
+        self.led1_label.grid(row=0, column=0)
+        self.led2_label = ttk.Label(self.root, text="LED2: Off")
+        self.led2_label.grid(row=0, column=1)
+        self.led3_label = ttk.Label(self.root, text="LED3: Off")
+        self.led3_label.grid(row=0, column=2)
+
+        # 风扇状态
+        self.fan1_label = ttk.Label(self.root, text="Fan1: Off")
+        self.fan1_label.grid(row=1, column=0)
+        self.fan2_label = ttk.Label(self.root, text="Fan2: Off")
+        self.fan2_label.grid(row=1, column=1)
+        self.fan3_label = ttk.Label(self.root, text="Fan3: Off")
+        self.fan3_label.grid(row=1, column=2)
+
+    def control_device(self, device, state):
+        if device.startswith("LED"):
+            self.update_led_status(int(device[3:]), state)
+        elif device.startswith("Fan"):
+            self.update_fan_status(int(device[3:]), state)
+
+    def update_led_status(self, led_num, status):
+        if status:
+            new_text = "On"
+        else:
+            new_text = "Off"
+        if led_num == 1:
+            self.led1_label.config(text=f"LED1: {new_text}")
+        elif led_num == 2:
+            self.led2_label.config(text=f"LED2: {new_text}")
+        elif led_num == 3:
+            self.led3_label.config(text=f"LED3: {new_text}")
+
+    def update_fan_status(self, fan_num, status):
+        if status:
+            new_text = "On"
+        else:
+            new_text = "Off"
+        if fan_num == 1:
+            self.fan1_label.config(text=f"Fan1: {new_text}")
+        elif fan_num == 2:
+            self.fan2_label.config(text=f"Fan2: {new_text}")
+        elif fan_num == 3:
+            self.fan3_label.config(text=f"Fan3: {new_text}")
+
+    # GUI窗口
+    def run(self):
+        self.root.geometry("300x100")
+        self.root.mainloop()
+
+
 class CPU:
     def __init__(self, memory, instructions):
         self.biu = BIU(memory, instructions)  # 将指令列表传递给BIU
         self.eu = EU()
+        self.gui = GUI()
+        self.eu.set_gui(self.gui)
         self.eu.set_memory(memory)
+        peripheral.set_eu(self.eu)
         self.instructions = instructions
+        self.running = False
 
-    def run(self):
+    def run_cpu(self):
+        self.running = True
         self.eu.parse_data_segment(self.instructions)  # 解析数据段
-        while True:
+        while self.running:
             if self.eu.registers['IP'] >= len(self.instructions):
                 print("IP 寄存器超出指令范围，停止执行")
                 break
@@ -450,6 +531,11 @@ class CPU:
             if not self.eu.execute_instruction(instruction):
                 break
             self.eu.registers['IP'] += 1  # 成功执行指令后，IP寄存器自增
+            time.sleep(2)  # 延迟以便于观察GUI变化
+
+    def run(self):
+        threading.Thread(target=self.run_cpu).start()  # 在新线程中启动CPU执行
+        self.gui.run()  # 启动GUI的主事件循环
 
 
 memory = [0] * 256
@@ -510,7 +596,7 @@ memory = [0] * 256
 
 
 instructions = [
-    # 配置定时器模式1，初始值10，定时器每10个周期触发一次
+    # 配置定时器模式1
     "CONFIG_TIMER 1 1 20",
     # 启动定时器
     "START_TIMER 1",

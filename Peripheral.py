@@ -11,6 +11,10 @@ class Peripheral:
             "Fan3": {"state": 0, "value": None}
         }
         self.display = ""
+        self.eu = None
+
+    def set_eu(self, eu):
+        self.eu = eu
 
     def control_device(self, device, state, value=None):
         if device in self.devices:
@@ -20,6 +24,9 @@ class Peripheral:
             if value is not None:
                 status += f" (Value: {value})"
             print(status)
+            # 同步更新GUI
+            if self.eu and self.eu.gui:  # 确保有GUI实例
+                self.eu.gui.control_device(device, state)
         else:
             print("Unknown device")
 
